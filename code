@@ -1,0 +1,179 @@
+#include "RTClib.h"
+RTC_DS1307 rtc;
+#include<TimerOne.h>
+#include<SD.h>
+#include<ArduinoJson.h>
+#include <DHT.h>
+#define Type DHT22
+int csPin=10;
+int ldrPin=A0;
+int sensePin=2;
+DHT dht(sensePin,Type);
+float ldrValue;
+float Intensity;
+float tempC;
+DateTime current;
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  Timer1.initialize(1000000);
+  Timer1.attachInterrupt(sense_temp);
+  attachInterrupt(digitalPinToInterrupt(3),sense_intensity,RISING);
+  rtc.begin();
+  if(rtc.isrunning()==false){
+    Serial.println("rtc is not running");
+    rtc.adjust(DateTime(F(__DATE__),F(__TIME__)));
+  }
+  else{
+    Serial.println("RTC is running"); 
+  }
+  current=rtc.now();
+Serial.println(current.year());
+  pinMode(ldrPin,INPUT);
+  SD.begin(csPin);
+  if(SD.begin(csPin)){
+    Serial.println("SD card initialized");
+  }
+  else{
+    Serial.println("SD card initialization failed");
+  }
+  delay(3000);
+  //File myFile=SD.open("data.txt",FILE_WRITE);
+  /*if(myFile){
+    myFile.println(jsonString);
+    myFile.close();
+    Serial.println("Written to file");
+    //Serial.println(jsonString);
+  }
+  else{
+    Serial.println("failed writing to file");
+  }
+  delay(3000);
+  myFile=SD.open("data.txt");
+  if(myFile){
+    while(myFile.available()){
+      Serial.write(myFile.read());
+    }
+    myFile.close();
+    delay(1000);
+    Serial.println("Content read from file");
+  }
+  else{
+    Serial.println("failed reading content from file");
+  }
+  delay(3000);*/
+
+  dht.begin();
+  delay(1000);
+}
+
+void sense_temp(){
+  Serial.println(1);
+  tempC=dht.readTemperature();
+  Serial.println(tempC);
+  int dhtHr=current.hour();
+  int dhtMin=current.minute();
+  int dhtSec=current.second();
+  File myFile=SD.open("data.txt",FILE_WRITE);
+  if(myFile){
+    myFile.println("{");
+    myFile.print(" ");
+    myFile.print("\"Temperature\":[");
+    myFile.print(tempC);
+    myFile.print(",");
+    myFile.print(dhtHr);
+    myFile.print("/");
+    myFile.print(dhtMin);
+    myFile.print("/");
+    myFile.print(dhtSec);
+    myFile.println("],");
+    myFile.close();
+  }
+  else{
+    Serial.println("Failed writing the content to file");
+  }
+
+}
+
+void sense_intensity(){
+  Serial.print(1);
+  DateTime current=rtc.now();
+  Serial.print(2);
+  ldrValue=analogRead(ldrPin);
+  Intensity=map(ldrValue,0,1023,0,255);
+  //Intensity=(ldrValue/1023.0)*(255.0);
+  Serial.println(Intensity);
+  int ldrHr=current.hour();
+  int ldrMin=current.minute();
+  int ldrSec=current.second();
+  File myFile=SD.open("data.txt",O_APPEND);
+  if(myFile){
+    myFile.print(" ");
+    myFile.print("\"Intensity\":[");
+    myFile.print(Intensity);
+    myFile.print(",");
+    myFile.print(ldrHr);
+    myFile.print("/");
+    myFile.print(ldrMin);
+    myFile.print("/");
+    myFile.print(ldrSec);
+    myFile.println("]");
+    myFile.print("}");
+    myFile.close();
+  } 
+  else{
+    Serial.println("failed writing the content to file");
+  }
+  
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  /*File myFile=SD.open("data.txt",FILE_WRITE);
+  if(myFile){
+    myFile.println("{");
+    myFile.print(" ");
+    myFile.print("\"Temperature\":[");
+    myFile.print(tempC);
+    myFile.print(",");
+    myFile.print(dhtHr);
+    myFile.print("/");
+    myFile.print(dhtMin);
+    myFile.print("/");
+    myFile.print(dhtSec);
+    myFile.println("] ,");
+    myFile.print(" ");
+    myFile.print("\"Intensity\":[");
+    myFile.print(Intensity);
+    myFile.print(",");
+    myFile.print(ldrHr);
+    myFile.print("/");
+    myFile.print(ldrMin);
+    myFile.print("/");
+    myFile.print(ldrSec);
+    myFile.println("]");
+    myFile.print("}");
+    myFile.close();
+     Serial.println("Content written to file");
+
+  }
+
+  else{
+    Serial.println("Failed writing the content to file");
+  }
+  delay(1000);
+  Serial.print("\x1B[2J");
+  delay(300);*/
+  File myFile=SD.open("data.txt",FILE_READ);
+  if(myFile){
+    while(myFile.available()){
+      Serial.write(myFile.read());
+    }
+    myFile.close();
+  }
+  else{
+    Serial.println("Error opening the file");
+  }
+  delay(2000);
+
+}
